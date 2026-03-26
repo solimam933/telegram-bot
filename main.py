@@ -2,7 +2,15 @@ import sqlite3
 import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, PreCheckoutQueryHandler, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    PreCheckoutQueryHandler,
+    filters
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -95,7 +103,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🟢 تشغيل", callback_data="on")
         ])
 
-    await update.message.reply_text("👋 مرحباً بك في بوت بيع النجوم", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text(
+        "👋 مرحباً بك في بوت بيع النجوم",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 
 # ========= BUTTONS =========
@@ -148,13 +159,45 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "1️⃣ اضغط بيع نجوم\n"
             "2️⃣ اختار طريقة الدفع\n"
             "3️⃣ اكتب عدد النجوم\n"
-            "4️⃣ ادفع من خلال Telegram\n"
-            "5️⃣ ابعت بيانات الاستلام\n\n"
-            "⏳ يتم مراجعة الطلب وتحويله"
+            "4️⃣ ادفع\n"
+            "5️⃣ ابعت بيانات الاستلام"
         )
 
-# (باقي الكود زي ما هو بدون تغيير 👇)
 
+# ========= MESSAGES =========
+async def messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not BOT_ACTIVE:
+        return
+
+    user_id = update.effective_user.id
+    text = update.message.text
+
+    if context.user_data.get("step") == "broadcast" and user_id == ADMIN_ID:
+        users = get_users()
+        for user in users:
+            try:
+                await context.bot.send_message(chat_id=user[0], text=text)
+            except:
+                pass
+        await update.message.reply_text("✅ تم الإرسال")
+        context.user_data["step"] = None
+        return
+
+    if context.user_data.get("step") == "stars":
+        try:
+            stars = int(text)
+            method = context.user_data.get("method")
+            price = calc_price(stars, method)
+
+            context.user_data["stars"] = stars
+            context.user_data["price"] = price
+
+            await update.message.reply_text(f"💰 السعر: {price}")
+        except:
+            await update.message.reply_text("❌ اكتب رقم صحيح")
+
+
+# ========= PAYMENT =========
 async def precheckout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.pre_checkout_query.answer(ok=True)
 
@@ -167,14 +210,14 @@ async def payment_success(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if method == "vodafone":
         await update.message.reply_text("📩 ابعت رقم Vodafone Cash")
     else:
-        await update.message.reply_text("📩 ابعت عنوان USDT (Aptos)")
+        await update.message.reply_text("📩 ابعت عنوان USDT")
 
 
 # ========= MAIN =========
 def main():
     init_db()
 
-    app = Application.builder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(buttons))
