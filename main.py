@@ -7,7 +7,13 @@ from telegram.request import HTTPXRequest
 
 logging.basicConfig(level=logging.INFO)
 
+# ✅ تعديل التوكن فقط
 TOKEN = os.getenv("TOKEN")
+if not TOKEN:
+    raise ValueError("❌ TOKEN مش موجود في Variables")
+
+TOKEN = str(TOKEN).strip()
+
 ADMIN_ID = 5403590752
 
 BOT_ACTIVE = True
