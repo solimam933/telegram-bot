@@ -7,7 +7,7 @@ from telegram.request import HTTPXRequest
 
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = os.getenv("8426453244:AAGsCyVBwkManQHdE0sRcyPTP_rxiQN1rnA")
+TOKEN = os.getenv("TOKEN")
 ADMIN_ID = 5403590752
 
 BOT_ACTIVE = True
